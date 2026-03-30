@@ -19,7 +19,16 @@
 <input id="taskInput" placeholder="할 일 입력">
 <button onclick="addTask()">추가</button>
 
+<br><br>
+
+<button onclick="loadTasks('all')">전체</button>
+<button onclick="loadTasks('active')">미완료</button>
+<button onclick="loadTasks('completed')">완료</button>
+
 <ul id="taskList"></ul>
+
+<h3>통계</h3>
+<p id="stats"></p>
 
 <script src="script.js"></script>
 
