@@ -14,7 +14,8 @@ db.run(`
 CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     text TEXT,
-    completed INTEGER DEFAULT 0
+    completed INTEGER DEFAULT 0,
+    focus_time INTEGER DEFAULT 0
 )
 `)
 
@@ -74,4 +75,18 @@ app.delete('/api/tasks/:id', (req, res) => {
 
 app.listen(PORT, () => {
     console.log('Server running on port ' + PORT)
+})
+
+app.put('/api/tasks/focus/:id', (req, res) => {
+    const id = req.params.id
+    const { time } = req.body
+
+    db.run(
+        'UPDATE tasks SET focus_time = focus_time + ? WHERE id = ?',
+        [time, id],
+        function(err) {
+            if (err) return res.status(500).send(err)
+            res.json({ message: 'focus time added' })
+        }
+    )
 })
