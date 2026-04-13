@@ -19,6 +19,14 @@ CREATE TABLE IF NOT EXISTS tasks (
 )
 `)
 
+db.run(`
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE,
+    password TEXT
+)
+`)
+
 app.get('/api/test', (req, res) => {
     res.json({ message: "server working" })
 })
@@ -90,3 +98,34 @@ app.put('/api/tasks/focus/:id', (req, res) => {
         }
     )
 })
+
+
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body
+
+    db.get(
+        'SELECT * FROM users WHERE username = ? AND password = ?',
+        [username, password],
+        (err, user) => {
+            if (err) return res.status(500).send(err)
+            if (!user) return res.status(401).send("로그인 실패")
+
+            res.json({ message: '로그인 성공', user })
+        }
+    )
+})
+
+
+app.post('/api/register', (req, res) => {
+    const { username, password } = req.body
+
+    db.run(
+        'INSERT INTO users (username, password) VALUES (?, ?)',
+        [username, password],
+        function(err) {
+            if (err) return res.status(500).send("이미 존재하는 사용자")
+            res.json({ message: '회원가입 완료' })
+        }
+    )
+})
+
