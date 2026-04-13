@@ -145,4 +145,62 @@ async function test() {
     document.getElementById('result').innerText = data.message
 }
 
+let currentUser = null
+
+async function register() {
+    const username = document.getElementById('username').value
+    const password = document.getElementById('password').value
+
+    const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    })
+
+    const text = await res.text()
+    document.getElementById('loginStatus').innerText = text
+}
+
+async function login() {
+    const username = document.getElementById('username').value
+    const password = document.getElementById('password').value
+
+    const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    })
+
+    if (res.ok) {
+        const data = await res.json()
+        currentUser = data.user
+        document.getElementById('loginStatus').innerText = "로그인 성공"
+    } else {
+        document.getElementById('loginStatus').innerText = "로그인 실패"
+    }
+}
+
+let chart = null
+
+function drawChart(tasks) {
+    const labels = tasks.map(t => t.text)
+    const data = tasks.map(t => t.focus_time || 0)
+
+    const ctx = document.getElementById('chart').getContext('2d')
+
+    if (chart) chart.destroy()
+
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '집중 시간',
+                data: data
+            }]
+        }
+    })
+}
+
 loadTasks()
+drawChart(tasks)
