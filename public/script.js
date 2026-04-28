@@ -1,50 +1,92 @@
+let currentUser = null
 let timer = null
 let seconds = 0
+let chart = null
 
-async function loadTasks(filter = 'all') {
-    const res = await fetch('/api/tasks')
+async function register() {
+    const username = document.getElementById('username').value
+    const password = document.getElementById('password').value
+
+    const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    })
+
+    document.getElementById('loginStatus').innerText = await res.text()
+}
+
+async function login() {
+    const username = document.getElementById('username').value
+    const password = document.getElementById('password').value
+
+    const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    })
+
+    if (res.ok) {
+        const data = await res.json()
+        currentUser = data.user
+        document.getElementById('loginStatus').innerText = "로그인 성공"
+        loadTasks()
+        loadTodayFocus()
+    }
+}
+
+async function loadTasks() {
+    if (!currentUser) return
+
+    const res = await fetch('/api/tasks/' + currentUser.id)
     const tasks = await res.json()
 
     const list = document.getElementById('taskList')
     list.innerHTML = ''
 
-    let filtered = tasks
-
-    if (filter === 'active') {
-        filtered = tasks.filter(t => !t.completed)
-    } else if (filter === 'completed') {
-        filtered = tasks.filter(t => t.completed)
-    }
-
-    filtered.forEach(task => {
+    tasks.forEach(t => {
         const li = document.createElement('li')
-
         li.innerHTML = `
-            <input type="checkbox" ${task.completed ? 'checked' : ''} 
-            onclick="toggleTask(${task.id})">
-            ${task.text}
-            (집중시간: ${task.focus_time || 0}초)
-            <button onclick="deleteTask(${task.id})">삭제</button>
-            <button onclick="editTask(${task.id}, '${task.text}')">수정</button>
+        <input type="checkbox" ${t.completed ? 'checked' : ''} onclick="toggleTask(${t.id})">
+        ${t.text} (${t.focus_time}초)
+        <button onclick="deleteTask(${t.id})">삭제</button>
         `
-
         list.appendChild(li)
     })
 
     updateStats(tasks)
-    updateTaskSelect(tasks)
+    updateSelect(tasks)
+    drawChart(tasks)
 }
 
 async function addTask() {
-    const input = document.getElementById('taskInput')
+    if (!currentUser || !currentUser.id) {
+        alert("로그인 제대로 안 됨")
+        return
+    }
 
-    await fetch('/api/tasks', {
+    const text = document.getElementById('taskInput').value
+
+    if (!text) {
+        alert("할 일을 입력하세요")
+        return
+    }
+
+    const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: input.value })
+        body: JSON.stringify({ 
+            text: text,
+            user_id: currentUser.id
+        })
     })
 
-    input.value = ''
+    if (!res.ok) {
+        alert("추가 실패")
+        return
+    }
+
+    document.getElementById('taskInput').value = ''
     loadTasks()
 }
 
@@ -58,39 +100,23 @@ async function deleteTask(id) {
     loadTasks()
 }
 
-async function editTask(id, oldText) {
-    const newText = prompt("수정할 내용", oldText)
-    if (!newText) return
-
-    await fetch('/api/tasks/edit/' + id, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: newText })
-    })
-
-    loadTasks()
-}
-
 function updateStats(tasks) {
     const total = tasks.length
-    const completed = tasks.filter(t => t.completed).length
-    const percent = total ? Math.round((completed / total) * 100) : 0
-
-    const totalFocus = tasks.reduce((sum, t) => sum + (t.focus_time || 0), 0)
+    const done = tasks.filter(t => t.completed).length
 
     document.getElementById('stats').innerText =
-        `총 ${total}개 / 완료 ${completed}개 (${percent}%) / 총 집중시간 ${totalFocus}초`
+        `총 ${total} / 완료 ${done}`
 }
 
-function updateTaskSelect(tasks) {
+function updateSelect(tasks) {
     const select = document.getElementById('taskSelect')
     select.innerHTML = ''
 
-    tasks.forEach(task => {
-        const option = document.createElement('option')
-        option.value = task.id
-        option.text = task.text
-        select.appendChild(option)
+    tasks.forEach(t => {
+        const op = document.createElement('option')
+        op.value = t.id
+        op.text = t.text
+        select.appendChild(op)
     })
 }
 
@@ -112,80 +138,45 @@ async function stopTimer() {
     await fetch('/api/tasks/focus/' + taskId, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ time: seconds })
+        body: JSON.stringify({
+            time: seconds,
+            user_id: currentUser.id
+        })
     })
 
     seconds = 0
     document.getElementById('timer').innerText = '0초'
 
     loadTasks()
+    loadTodayFocus()
 }
 
 async function addManualTime() {
-    const input = document.getElementById('manualTime')
-    const time = parseInt(input.value)
-
-    if (!time) return
-
+    const time = parseInt(document.getElementById('manualTime').value)
     const taskId = document.getElementById('taskSelect').value
 
     await fetch('/api/tasks/focus/' + taskId, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ time })
+        body: JSON.stringify({
+            time,
+            user_id: currentUser.id
+        })
     })
 
-    input.value = ''
     loadTasks()
+    loadTodayFocus()
 }
 
-async function test() {
-    const res = await fetch('/api/test')
+async function loadTodayFocus() {
+    const res = await fetch('/api/focus/today/' + currentUser.id)
     const data = await res.json()
-    document.getElementById('result').innerText = data.message
+
+    document.getElementById('stats').innerText +=
+        ` / 오늘 ${data.total}초`
 }
-
-let currentUser = null
-
-async function register() {
-    const username = document.getElementById('username').value
-    const password = document.getElementById('password').value
-
-    const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    })
-
-    const text = await res.text()
-    document.getElementById('loginStatus').innerText = text
-}
-
-async function login() {
-    const username = document.getElementById('username').value
-    const password = document.getElementById('password').value
-
-    const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    })
-
-    if (res.ok) {
-        const data = await res.json()
-        currentUser = data.user
-        document.getElementById('loginStatus').innerText = "로그인 성공"
-    } else {
-        document.getElementById('loginStatus').innerText = "로그인 실패"
-    }
-}
-
-let chart = null
 
 function drawChart(tasks) {
-    const labels = tasks.map(t => t.text)
-    const data = tasks.map(t => t.focus_time || 0)
-
     const ctx = document.getElementById('chart').getContext('2d')
 
     if (chart) chart.destroy()
@@ -193,14 +184,10 @@ function drawChart(tasks) {
     chart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: tasks.map(t => t.text),
             datasets: [{
-                label: '집중 시간',
-                data: data
+                data: tasks.map(t => t.focus_time)
             }]
         }
     })
 }
-
-loadTasks()
-drawChart(tasks)
