@@ -1,4 +1,4 @@
-let currentUser = null
+let currentUser = null 
 let timer = null
 let seconds = 0
 let chart = null
