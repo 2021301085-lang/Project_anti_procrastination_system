@@ -1,62 +1,45 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>Anti Procrastination System</title>
+<meta charset="UTF-8">
+<title>Anti Procrastination</title>
 </head>
 <body>
 
-    <h1>Anti Procrastination System</h1>
+<h1>Anti Procrastination</h1>
 
-    <button onclick="test()">Server Test</button>
-    <p id="result"></p>
+<h2>로그인</h2>
+<input id="username" placeholder="아이디">
+<input id="password" type="password" placeholder="비밀번호">
+<button onclick="register()">회원가입</button>
+<button onclick="login()">로그인</button>
+<p id="loginStatus"></p>
 
-    <hr>
+<hr>
 
-    <h2>로그인</h2>
-    <input id="username" placeholder="아이디">
-    <input id="password" type="password" placeholder="비밀번호">
-    <button onclick="register()">회원가입</button>
-    <button onclick="login()">로그인</button>
-    <p id="loginStatus"></p>
+<h2>할 일</h2>
+<input id="taskInput">
+<button onclick="addTask()">추가</button>
 
-    <hr>
+<ul id="taskList"></ul>
 
-    <h2>할 일 관리</h2>
-    <input id="taskInput" placeholder="할 일 입력">
-    <button onclick="addTask()">추가</button>
-    <br><br>
-    
-    <button onclick="loadTasks('all')">전체</button>
-    <button onclick="loadTasks('active')">미완료</button>
-    <button onclick="loadTasks('completed')">완료</button>
-    
-    <ul id="taskList"></ul>
+<h3 id="stats"></h3>
 
-    <h3>통계</h3>
-    <p id="stats"></p>
+<hr>
 
-    <hr>
+<h2>집중</h2>
+<select id="taskSelect"></select>
+<button onclick="startTimer()">시작</button>
+<button onclick="stopTimer()">정지</button>
+<p id="timer">0초</p>
 
-    <h2>집중 시간 측정</h2>
-    <select id="taskSelect"></select>
-    <br><br>
-    
-    <button onclick="startTimer()">시작</button>
-    <button onclick="stopTimer()">정지</button>
-    <p id="timer">0초</p>
-    <br>
-    
-    <input id="manualTime" placeholder="초 입력">
-    <button onclick="addManualTime()">시간 추가</button>
+<input id="manualTime">
+<button onclick="addManualTime()">추가</button>
 
-    <hr>
+<canvas id="chart" width="400" height="200"></canvas>
 
-    <h2>집중 시간 그래프</h2>
-    <canvas id="chart" width="400" height="200"></canvas>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="script.js"></script>
 
 </body>
 </html>
