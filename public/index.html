@@ -1,46 +1,97 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>Anti Procrastination</title>
+    <meta charset="UTF-8">
+    <title>FocusFit</title>
 </head>
 <body>
 
-<h1>Anti Procrastination</h1>
+    <h1>FocusFit</h1>
+    <p>미루는 습관을 줄이기 위한 집중 시간 관리 시스템</p>
 
-<h2>로그인</h2>
-<input id="username" placeholder="아이디">
-<input id="password" type="password" placeholder="비밀번호">
-<button onclick="register()">회원가입</button>
-<button onclick="login()">로그인</button>
-<p id="loginStatus"></p>
+    <button onclick="testServer()">Server Test</button>
+    <p id="result"></p>
 
-<hr>
+    <hr>
 
-<h2>할 일</h2>
-<input id="taskInput">
-<button onclick="addTask()">추가</button>
+    <h2>로그인</h2>
+    <input id="username" placeholder="아이디">
+    <input id="password" type="password" placeholder="비밀번호">
+    <button onclick="register()">회원가입</button>
+    <button onclick="login()">로그인</button>
+    <button onclick="logout()">로그아웃</button>
+    <p id="loginStatus">로그인이 필요합니다.</p>
 
-<ul id="taskList"></ul>
+    <hr>
 
-<h3 id="stats"></h3>
+    <h2>오늘 목표 집중시간</h2>
+    <input id="goalInput" type="number" placeholder="목표 시간(초)">
+    <button onclick="saveGoal()">목표 저장</button>
+    <p id="goalStatus">목표 없음</p>
 
-<hr>
+    <hr>
 
-<h2>집중</h2>
-<select id="taskSelect"></select>
-<button onclick="startTimer()">시작</button>
-<button onclick="stopTimer()">정지</button>
-<p id="timer">0초</p>
+    <h2>할 일 관리</h2>
+    <input id="taskInput" placeholder="할 일 입력">
+    <button onclick="addTask()">추가</button>
 
-<input id="manualTime">
-<button onclick="addManualTime()">추가</button>
+    <br><br>
 
-<canvas id="chart" width="400" height="200"></canvas>
+    <button onclick="loadTasks('all')">전체</button>
+    <button onclick="loadTasks('active')">미완료</button>
+    <button onclick="loadTasks('completed')">완료</button>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="script.js"></script>
+    <ul id="taskList"></ul>
+
+    <h3>통계</h3>
+    <p id="stats">로그인 후 통계가 표시됩니다.</p>
+
+    <hr>
+
+    <h2>자유 집중 시간 측정</h2>
+    <select id="taskSelect"></select>
+
+    <br><br>
+
+    <button onclick="startTimer()">시작</button>
+    <button onclick="stopTimer()">정지 및 저장</button>
+    <button onclick="resetTimer()">초기화</button>
+    <p id="timer">0초</p>
+
+    <input id="manualTime" type="number" placeholder="초 입력">
+    <button onclick="addManualTime()">시간 추가</button>
+
+    <hr>
+
+    <h2>포모도로 타이머</h2>
+    <select id="pomodoroTaskSelect"></select>
+    <br><br>
+
+    <select id="pomodoroMode">
+        <option value="1500">25분 집중</option>
+        <option value="300">5분 휴식</option>
+        <option value="600">10분 긴 휴식</option>
+    </select>
+
+    <br><br>
+
+    <button onclick="startPomodoro()">포모도로 시작</button>
+    <button onclick="pausePomodoro()">일시정지</button>
+    <button onclick="resetPomodoro()">초기화</button>
+    <p id="pomodoroTimer">25:00</p>
+
+    <hr>
+
+    <h2>할 일별 집중 시간 그래프</h2>
+    <canvas id="taskChart" width="400" height="200"></canvas>
+
+    <hr>
+
+    <h2>최근 7일 집중 시간 그래프</h2>
+    <canvas id="weeklyChart" width="400" height="200"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
 
 </body>
 </html>
-
