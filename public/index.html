@@ -24,6 +24,14 @@
 
     <hr>
 
+    <h2>대시보드</h2>
+    <p id="dashboard">로그인 후 대시보드가 표시됩니다.</p>
+
+    <h3>오늘 추천 할 일</h3>
+    <p id="recommendTask">추천 할 일이 없습니다.</p>
+
+    <hr>
+
     <h2>오늘 목표 집중시간</h2>
     <input id="goalInput" type="number" placeholder="목표 시간(초)">
     <button onclick="saveGoal()">목표 저장</button>
@@ -32,7 +40,16 @@
     <hr>
 
     <h2>할 일 관리</h2>
+
     <input id="taskInput" placeholder="할 일 입력">
+    <input id="categoryInput" placeholder="카테고리">
+    <input id="dueDateInput" type="date">
+    <select id="priorityInput">
+        <option value="1">높음</option>
+        <option value="2" selected>보통</option>
+        <option value="3">낮음</option>
+    </select>
+    <input id="estimatedInput" type="number" placeholder="예상 시간(초)">
     <button onclick="addTask()">추가</button>
 
     <br><br>
@@ -65,6 +82,7 @@
 
     <h2>포모도로 타이머</h2>
     <select id="pomodoroTaskSelect"></select>
+
     <br><br>
 
     <select id="pomodoroMode">
