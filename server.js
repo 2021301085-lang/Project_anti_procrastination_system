@@ -24,6 +24,17 @@ function today() {
     }).format(new Date())
 }
 
+function addDays(dateText, amount) {
+    const date = new Date(dateText + 'T00:00:00+09:00')
+    date.setDate(date.getDate() + amount)
+    return new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(date)
+}
+
 function initDatabase(callback) {
     db.serialize(() => {
         db.run(`
@@ -40,7 +51,11 @@ function initDatabase(callback) {
             user_id INTEGER,
             text TEXT NOT NULL,
             completed INTEGER DEFAULT 0,
-            focus_time INTEGER DEFAULT 0
+            focus_time INTEGER DEFAULT 0,
+            due_date TEXT,
+            priority INTEGER DEFAULT 2,
+            category TEXT DEFAULT '',
+            estimated_time INTEGER DEFAULT 0
         )
         `)
 
@@ -71,8 +86,12 @@ function initDatabase(callback) {
 function addMissingColumns(callback) {
     const jobs = [
         { table: 'tasks', column: 'user_id', definition: 'user_id INTEGER' },
+        { table: 'tasks', column: 'completed', definition: 'completed INTEGER DEFAULT 0' },
         { table: 'tasks', column: 'focus_time', definition: 'focus_time INTEGER DEFAULT 0' },
-        { table: 'tasks', column: 'completed', definition: 'completed INTEGER DEFAULT 0' }
+        { table: 'tasks', column: 'due_date', definition: 'due_date TEXT' },
+        { table: 'tasks', column: 'priority', definition: 'priority INTEGER DEFAULT 2' },
+        { table: 'tasks', column: 'category', definition: "category TEXT DEFAULT ''" },
+        { table: 'tasks', column: 'estimated_time', definition: 'estimated_time INTEGER DEFAULT 0' }
     ]
 
     let finished = 0
@@ -140,7 +159,7 @@ app.post('/api/login', (req, res) => {
 })
 
 app.post('/api/tasks', (req, res) => {
-    const { text, user_id } = req.body
+    const { text, user_id, due_date, priority, category, estimated_time } = req.body
 
     if (!user_id) {
         return res.status(400).send('user_id 없음')
@@ -151,11 +170,31 @@ app.post('/api/tasks', (req, res) => {
     }
 
     db.run(
-        'INSERT INTO tasks (user_id, text) VALUES (?, ?)',
-        [user_id, text.trim()],
+        `
+        INSERT INTO tasks (user_id, text, due_date, priority, category, estimated_time)
+        VALUES (?, ?, ?, ?, ?, ?)
+        `,
+        [
+            user_id,
+            text.trim(),
+            due_date || '',
+            Number(priority) || 2,
+            category || '',
+            Number(estimated_time) || 0
+        ],
         function(err) {
             if (err) return res.status(500).send('DB 오류')
-            res.json({ id: this.lastID, user_id, text: text.trim(), completed: 0, focus_time: 0 })
+            res.json({
+                id: this.lastID,
+                user_id,
+                text: text.trim(),
+                completed: 0,
+                focus_time: 0,
+                due_date: due_date || '',
+                priority: Number(priority) || 2,
+                category: category || '',
+                estimated_time: Number(estimated_time) || 0
+            })
         }
     )
 })
@@ -164,11 +203,40 @@ app.get('/api/tasks/:user_id', (req, res) => {
     const user_id = req.params.user_id
 
     db.all(
-        'SELECT * FROM tasks WHERE user_id = ? ORDER BY id DESC',
+        `
+        SELECT *
+        FROM tasks
+        WHERE user_id = ?
+        ORDER BY completed ASC, priority ASC, due_date ASC, id DESC
+        `,
         [user_id],
         (err, rows) => {
             if (err) return res.status(500).send('DB 오류')
             res.json(rows)
+        }
+    )
+})
+
+app.get('/api/tasks/recommend/:user_id', (req, res) => {
+    const user_id = req.params.user_id
+
+    db.get(
+        `
+        SELECT *
+        FROM tasks
+        WHERE user_id = ? AND completed = 0
+        ORDER BY
+            CASE WHEN due_date IS NULL OR due_date = '' THEN 1 ELSE 0 END ASC,
+            due_date ASC,
+            priority ASC,
+            estimated_time DESC,
+            id DESC
+        LIMIT 1
+        `,
+        [user_id],
+        (err, row) => {
+            if (err) return res.status(500).send('DB 오류')
+            res.json({ task: row || null })
         }
     )
 })
@@ -188,15 +256,26 @@ app.put('/api/tasks/:id/toggle', (req, res) => {
 
 app.put('/api/tasks/:id/edit', (req, res) => {
     const id = req.params.id
-    const { text } = req.body
+    const { text, due_date, priority, category, estimated_time } = req.body
 
     if (!text || text.trim() === '') {
         return res.status(400).send('수정할 내용을 입력하세요')
     }
 
     db.run(
-        'UPDATE tasks SET text = ? WHERE id = ?',
-        [text.trim(), id],
+        `
+        UPDATE tasks
+        SET text = ?, due_date = ?, priority = ?, category = ?, estimated_time = ?
+        WHERE id = ?
+        `,
+        [
+            text.trim(),
+            due_date || '',
+            Number(priority) || 2,
+            category || '',
+            Number(estimated_time) || 0,
+            id
+        ],
         function(err) {
             if (err) return res.status(500).send('DB 오류')
             res.json({ message: 'updated' })
@@ -280,6 +359,36 @@ app.get('/api/focus/weekly/:user_id', (req, res) => {
     )
 })
 
+app.get('/api/streak/:user_id', (req, res) => {
+    const user_id = req.params.user_id
+
+    db.all(
+        `
+        SELECT date, SUM(time) as total
+        FROM focus_logs
+        WHERE user_id = ?
+        GROUP BY date
+        HAVING SUM(time) > 0
+        ORDER BY date DESC
+        `,
+        [user_id],
+        (err, rows) => {
+            if (err) return res.status(500).send('DB 오류')
+
+            let streak = 0
+            let checkDate = today()
+            const dateSet = new Set(rows.map(row => row.date))
+
+            while (dateSet.has(checkDate)) {
+                streak++
+                checkDate = addDays(checkDate, -1)
+            }
+
+            res.json({ streak })
+        }
+    )
+})
+
 app.get('/api/goal/today/:user_id', (req, res) => {
     const user_id = req.params.user_id
     const date = today()
@@ -323,4 +432,3 @@ initDatabase(() => {
         console.log('Server running on port ' + PORT)
     })
 })
-
