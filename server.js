@@ -359,6 +359,108 @@ app.get('/api/focus/weekly/:user_id', (req, res) => {
     )
 })
 
+app.get('/api/focus/history/:user_id', (req, res) => {
+    const user_id = req.params.user_id
+
+    db.all(
+        `
+        SELECT
+            focus_logs.date,
+            focus_logs.time,
+            tasks.text as task_name
+        FROM focus_logs
+        LEFT JOIN tasks
+        ON focus_logs.task_id = tasks.id
+        WHERE focus_logs.user_id = ?
+        ORDER BY focus_logs.id DESC
+        LIMIT 10
+        `,
+        [user_id],
+        (err, rows) => {
+            if (err) {
+                return res.status(500).send('DB 오류')
+            }
+
+            res.json(rows)
+        }
+    )
+})
+
+app.get('/api/report/weekly/:user_id', (req, res) => {
+    const user_id = req.params.user_id
+
+    db.all(
+        `
+        SELECT
+            date,
+            SUM(time) as total
+        FROM focus_logs
+        WHERE user_id = ?
+        GROUP BY date
+        ORDER BY date DESC
+        LIMIT 7
+        `,
+        [user_id],
+        (err, rows) => {
+            if (err) {
+                return res.status(500).send('DB 오류')
+            }
+
+            const totalFocus =
+                rows.reduce(
+                    (sum, row) => sum + row.total,
+                    0
+                )
+
+            const averageFocus =
+                rows.length
+                    ? Math.floor(totalFocus / rows.length)
+                    : 0
+
+            let bestDay = '없음'
+            let maxFocus = 0
+
+            rows.forEach(row => {
+                if (row.total > maxFocus) {
+                    maxFocus = row.total
+                    bestDay = row.date
+                }
+            })
+
+            db.get(
+                `
+                SELECT
+                    tasks.text,
+                    SUM(focus_logs.time) as total
+                FROM focus_logs
+                JOIN tasks
+                ON focus_logs.task_id = tasks.id
+                WHERE focus_logs.user_id = ?
+                GROUP BY focus_logs.task_id
+                ORDER BY total DESC
+                LIMIT 1
+                `,
+                [user_id],
+                (taskErr, taskRow) => {
+                    if (taskErr) {
+                        return res.status(500).send('DB 오류')
+                    }
+
+                    res.json({
+                        totalFocus,
+                        averageFocus,
+                        bestDay,
+                        bestTask:
+                            taskRow
+                                ? taskRow.text
+                                : '없음'
+                    })
+                }
+            )
+        }
+    )
+})
+
 app.get('/api/streak/:user_id', (req, res) => {
     const user_id = req.params.user_id
 
