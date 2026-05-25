@@ -91,6 +91,8 @@ async function loadDashboard() {
     await loadWeeklyFocus()
     await loadStreak()
     await loadRecommendTask()
+    await loadFocusHistory()
+    await loadWeeklyReport()
     updateDashboard()
 }
 
@@ -592,4 +594,44 @@ function priorityText(priority) {
     }
 
     return '보통'
+}
+
+async function loadFocusHistory() {
+    if (!currentUser) return
+
+    const res = await fetch('/api/focus/history/' + currentUser.id)
+    const rows = await res.json()
+
+    const list = document.getElementById('focusHistory')
+    list.innerHTML = ''
+
+    if (rows.length === 0) {
+        list.innerHTML =
+            '<li>집중 기록이 없습니다.</li>'
+        return
+    }
+
+    rows.forEach(row => {
+        const li = document.createElement('li')
+
+        li.innerText =
+            `${row.date}
+            / ${row.task_name || '이름 없음'}
+            / ${row.time}초`
+
+        list.appendChild(li)
+    })
+}
+
+async function loadWeeklyReport() {
+    if (!currentUser) return
+
+    const res = await fetch('/api/report/weekly/' + currentUser.id)
+    const report = await res.json()
+
+    document.getElementById('weeklyReport').innerText =
+        `최근 7일 총 집중시간: ${report.totalFocus}초
+평균 집중시간: ${report.averageFocus}초
+가장 집중한 날: ${report.bestDay}
+가장 많이 집중한 할 일: ${report.bestTask}`
 }
