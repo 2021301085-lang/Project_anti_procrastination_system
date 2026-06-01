@@ -91,6 +91,7 @@ async function loadDashboard() {
     await loadWeeklyFocus()
     await loadStreak()
     await loadRecommendTask()
+    await loadRiskTasks()
     await loadFocusHistory()
     await loadWeeklyReport()
     updateDashboard()
@@ -634,4 +635,35 @@ async function loadWeeklyReport() {
 평균 집중시간: ${report.averageFocus}초
 가장 집중한 날: ${report.bestDay}
 가장 많이 집중한 할 일: ${report.bestTask}`
+}
+
+async function loadRiskTasks() {
+    if (!currentUser) return
+
+    const res = await fetch('/api/risk/' + currentUser.id)
+    const tasks = await res.json()
+
+    const list =
+        document.getElementById('riskList')
+
+    list.innerHTML = ''
+
+    if (tasks.length === 0) {
+        list.innerHTML =
+            '<li>분석할 할 일이 없습니다.</li>'
+        return
+    }
+
+    tasks.forEach(task => {
+        const li = document.createElement('li')
+
+        li.innerText =
+            `${task.text}
+ / 위험도 ${task.level}
+ / 이유: ${task.reasons.join(', ') || '없음'}
+ / 집중 ${task.focus_time || 0}초
+ / 예상 ${task.estimated_time || 0}초`
+
+        list.appendChild(li)
+    })
 }
