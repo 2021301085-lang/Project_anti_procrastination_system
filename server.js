@@ -241,6 +241,102 @@ app.get('/api/tasks/recommend/:user_id', (req, res) => {
     )
 })
 
+app.get('/api/risk/:user_id', (req, res) => {
+    const user_id = req.params.user_id
+    const todayDate = today()
+
+    db.all(
+        `
+        SELECT *
+        FROM tasks
+        WHERE user_id = ?
+        AND completed = 0
+        `,
+        [user_id],
+        (err, rows) => {
+            if (err) {
+                return res
+                    .status(500)
+                    .send('DB 오류')
+            }
+
+            const result = rows.map(task => {
+                let score = 0
+                const reasons = []
+
+                if (Number(task.priority) === 1) {
+                    score += 30
+                    reasons.push('높은 우선순위')
+                }
+
+                if (
+                    task.due_date &&
+                    task.due_date !== ''
+                ) {
+                    const diff =
+                        Math.floor(
+                            (
+                                new Date(task.due_date) -
+                                new Date(todayDate)
+                            ) /
+                            (
+                                1000 *
+                                60 *
+                                60 *
+                                24
+                            )
+                        )
+
+                    if (diff <= 1) {
+                        score += 50
+                        reasons.push('마감 임박')
+                    } else if (diff <= 3) {
+                        score += 20
+                        reasons.push('마감 가까움')
+                    }
+                }
+
+                if (
+                    task.estimated_time > 0 &&
+                    task.focus_time <
+                    task.estimated_time * 0.3
+                ) {
+                    score += 30
+                    reasons.push('집중 부족')
+                }
+
+                if (
+                    task.focus_time === 0
+                ) {
+                    score += 20
+                    reasons.push('아직 시작 안 함')
+                }
+
+                let level = '낮음 🟢'
+
+                if (score >= 70) {
+                    level = '높음 🔴'
+                } else if (score >= 40) {
+                    level = '보통 🟠'
+                }
+
+                return {
+                    ...task,
+                    score,
+                    level,
+                    reasons
+                }
+            })
+
+            result.sort(
+                (a, b) => b.score - a.score
+            )
+
+            res.json(result)
+        }
+    )
+})
+
 app.put('/api/tasks/:id/toggle', (req, res) => {
     const id = req.params.id
 
